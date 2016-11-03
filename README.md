@@ -15,7 +15,7 @@ or give Cantera a test drive in the cloud. Click on the Binder link below to
 launch an interactive environment where you can run these examples. For this,
 there is no installation required.
 
-[![Binder](http://mybinder.org/badge.svg)](http://mybinder.org:/repo/cantera/cantera-jupyter)
+[![Binder](http://mybinder.org/badge.svg)](http://mybinder.org:/repo/bslakman/cantera-jupyter)
 
 ## Examples
 
