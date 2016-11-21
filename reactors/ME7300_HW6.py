@@ -75,24 +75,93 @@ plt.plot(1.0/T, np.log(rate_mech))
 plt.plot(1.0/T, np.log(rate_book))
 
 
-# We'll specify a starting temperature and pressure of 1000 K and 10 bar, and stoichiometric combustion
+# We'll specify a starting temperature and pressure of 1000 K and 3 bar, and stoichiometric combustion
 # #### a. Specify the moles of O2 and N2 based on stoichiometric combustion.
 # Replace the "xxxx" with the correct number of moles.
 
-# In[118]:
+# In[219]:
 
-gas.TPX = 1000, 10e5, 'nc7h16:1.0,o2:11.0,n2:41.58'
-#gas.TPX = 1000, 10e5, 'nc7h16:1.0,o2:xxxx,n2:xxxx'
+gas.TPX = 1000, 3e5, 'nc7h16:1.0,o2:11.0,n2:41.58'
+#gas.TPX = 1000, 3e5, 'nc7h16:1.0,o2:xxxx,n2:xxxx'
 
 
 # We'll find the equilibrium flame temperature by equilibrating keeping pressure and enthalpy constant.
 
-# In[117]:
+# In[214]:
 
 gas.equilibrate('HP')
 print "The adiabatic flame temperature is {0} K".format(int(round(gas.T)))
-print "If you did part a properly, you should get a flame temperature of 2691 K."
+print "If you did part a properly, you should get a flame temperature of 2633 K."
 
+
+# Let's print out the concentration of some components at equilibrium.
+
+# In[215]:
+
+print "Heptane: {:.2e}".format(gas['nc7h16'].X[0])
+print "OH: {:.2e}".format(gas['oh'].X[0])
+print "NO: {:.2e}".format(gas['no'].X[0])
+print "O2: {:.2e}".format(gas['o2'].X[0])
+
+
+# #### b. What is the NO concentration if the fuel is burned at an initial temperature of 600, 800, and 1200 K?
+# Replace the temperature above and rerun that and the following cells.
+
+# ### Kinetics
+# We will burn the gas starting at the same temperature, but atmospheric pressure. This time we will hold volume constant using an ideal gas reactor, so pressure can change.
+# The following code will print out the simulation time along with temperature, pressure, and internal energy.
+
+# In[225]:
+
+gas.TPX = 1000, 1e5, 'nc7h16:1.0,o2:11.0,n2:41.58'
+#gas.TPX = 1000, 1e5, 'nc7h16:1.0,o2:xxxx,n2:xxxx' # fill in your calculated o2, n2 values.
+
+reactor = ct.IdealGasReactor(gas)
+reactor_network = ct.ReactorNet([reactor])
+
+start_time = 0.0  #starting time
+end_time = 0.5 # seconds
+n_steps = 501
+times = np.linspace(start_time, end_time, n_steps)
+concentrations = np.zeros((n_steps, gas.n_species))
+mole_frac = np.zeros((n_steps, gas.n_species))
+pressures = np.zeros(n_steps)
+temperatures = np.zeros(n_steps)
+
+print_data = True
+if print_data:
+    #this just gives headings
+    print('{0:>10s} {1:>10s} {2:>10s} {3:>14s}'.format(
+            't [s]','T [K]','P [Pa]','u [J/kg]')) 
+
+for n, time in enumerate(times):
+    if time > 0:
+        reactor_network.advance(time)
+    temperatures[n] = reactor.T
+    pressures[n] = reactor.thermo.P
+    concentrations[n,:] = reactor.thermo.concentrations
+    mole_frac[n,:] = gas.X
+    if print_data:
+        print('{0:10.3e} {1:10.3f} {2:10.3f} {3:14.6e}'.format(
+                 reactor_network.time, reactor.T, reactor.thermo.P, reactor.thermo.u))
+
+
+# #### c. What is the approximate ignition time? (hint: when do the temperature, pressure have the largest change?) Change initial temperature, pressure in the cell above, and comment on the change in ignition time.
+
+# In[226]:
+
+i_no = gas.species_names.index('no')
+i_o2 = gas.species_names.index('o2')
+i_oh = gas.species_names.index('oh')
+plt.plot(times, mole_frac[:,i_no], label='NO')
+#plt.plot(times, mole_frac[:,i_o2], label='O2')
+plt.plot(times, mole_frac[:,i_oh], label='OH')
+plt.xlim(0.01, 0.1)
+plt.legend(loc='best')
+print "The maximum mole fraction of NO is {:.2e}".format(np.max(concentrations[:,i_no]))
+
+
+# #### d. At what conditions can we achieve a maximum NO mole fraction of 0.005?
 
 # In[ ]:
 
