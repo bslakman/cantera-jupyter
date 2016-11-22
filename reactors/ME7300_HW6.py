@@ -7,7 +7,10 @@
 # 
 # #### Calculate:
 # 1. The adiabatic flame temperature if the fuel and air are preheated and introduced into the chamber at 500 K. 
-# 2. The NOx concentration at equlibrium for $\phi$ = 0.7, 1.0, and 1.3
+# 2. The NO mole fraction at equlibrium for $\phi$ = 0.7, 1.0, and 1.3
+# 3. The time at which the fuel ignites for $\phi$ = 0.7, 1.0, and 1.3
+# 4. The time at which mole fraction of the fuel drops below 100 ppm for each $\phi$
+# 5. At what time should we quench the reaction if we want to keep NO emissions below 1000 ppm? Is this before or after the time in part (4)?
 # 
 # In this homework we will use more detailed combustion chemistry then we previously considered in this class, along with the Zeldovich mechanism for thermal fixation of atmospheric N2, to model and predict NOx formation in heptane combustion.
 # We use an open source software tool called [Cantera](http://www.cantera.org/docs/sphinx/html/index.html) which helps us solve thermodynamics and kinetics problems.
@@ -16,8 +19,9 @@
 # 
 # ### Simply click inside the cells below to be able to type in and edit them, and press Shift+Enter to execute the code in a cell that is selected.
 
-# In[65]:
+# In[79]:
 
+# Imports
 import cantera as ct
 import numpy as np
 import matplotlib.pyplot as plt
@@ -79,7 +83,7 @@ gas.equilibrate('UV')
 print "The adiabatic flame temperature is {0} K".format(int(round(gas.T)))
 
 
-# #### 2. Calculate the NOx concentration at equlibrium for $\phi$ = 0.7, 1.0, and 1.3
+# #### 2. Calculate the NO concentration at equlibrium for $\phi$ = 0.7, 1.0, and 1.3
 # Change the numbers of moles for these equivalence ratios,below.
 
 # In[70]:
@@ -122,61 +126,89 @@ plt.ylabel('NO (ppm)')
 print "The NO is maximum at equivalence ratio " + str(round(equivalence_ratios[np.argmax(x_NO)],3))
 
 
-# ### Kinetics
-# We will burn the gas starting at the same temperature, but atmospheric pressure. This time we will hold volume constant using an ideal gas reactor, so pressure can change.
-# The following code will print out the simulation time along with temperature, pressure, and internal energy.
+# #### 3. Calculate the time at which the fuel ignites for $\phi$ = 0.7, 1.0, and 1.3
+# #### 4. Calculate the time at which mole fraction of the fuel drops below 100 ppm for each $\phi$
+# #### 5. At what time should we quench the reaction if we want to keep NO emissions below 1000 ppm? Is this before or after the time in part (4)?
 
-# In[25]:
+# For these three questions, we need to calculate kinetics.
+# The following code will utilize an ideal gas reactor (constant volume) in Cantera to model the reactor. We will print the answers to questions 3-5.
 
-gas.TPX = 1000, 1e5, 'nc7h16:1.0,o2:11.0,n2:41.58'
-#gas.TPX = 1000, 1e5, 'nc7h16:1.0,o2:xxxx,n2:xxxx' # fill in your calculated o2, n2 values.
+# In[158]:
 
-reactor = ct.IdealGasReactor(gas)
-reactor_network = ct.ReactorNet([reactor])
-
-start_time = 0.0  #starting time
-end_time = 0.5 # seconds
-n_steps = 501
-times = np.linspace(start_time, end_time, n_steps)
-concentrations = np.zeros((n_steps, gas.n_species))
-mole_frac = np.zeros((n_steps, gas.n_species))
-pressures = np.zeros(n_steps)
-temperatures = np.zeros(n_steps)
-
-print_data = True
-if print_data:
-    #this just gives headings
-    print('{0:>10s} {1:>10s} {2:>10s} {3:>14s}'.format(
-            't [s]','T [K]','P [Pa]','u [J/kg]')) 
-
-for n, time in enumerate(times):
-    if time > 0:
-        reactor_network.advance(time)
-    temperatures[n] = reactor.T
-    pressures[n] = reactor.thermo.P
-    concentrations[n,:] = reactor.thermo.concentrations
-    mole_frac[n,:] = gas.X
-    if print_data:
-        print('{0:10.3e} {1:10.3f} {2:10.3f} {3:14.6e}'.format(
-                 reactor_network.time, reactor.T, reactor.thermo.P, reactor.thermo.u))
-
-
-# #### c. What is the approximate ignition time? (hint: when do the temperature, pressure have the largest change?) Change initial temperature, pressure in the cell above, and comment on the change in ignition time.
-
-# In[21]:
-
+equivalence_ratios = np.array([0.7, 1.0, 1.3])
+ignitions = np.array([71.46, 69.45, 68.19])
+i_fuel = gas.species_names.index('nc7h16')
 i_no = gas.species_names.index('no')
-#i_o2 = gas.species_names.index('o2')
 i_oh = gas.species_names.index('oh')
-plt.plot(times, mole_frac[:,i_no], label='NO')
-#plt.plot(times, mole_frac[:,i_o2], label='O2')
-plt.plot(times, mole_frac[:,i_oh], label='OH')
-plt.xlim(0.03, 0.04)
-plt.legend(loc='best')
-print "The maximum mole fraction of NO is {:.2e}".format(np.max(mole_frac[:,i_no]))
+i_o = gas.species_names.index('o')
+i_h = gas.species_names.index('h')
+i_n2 = gas.species_names.index('n2')
 
+plt.figure(figsize=(6,12))
+plt_temps = plt.subplot(3,1,1)
+plt_input_spec = plt.subplot(3,1,2)
+plt_radicals = plt.subplot(3,1,3)
 
-# #### d. At what conditions can we achieve a maximum NO mole fraction of 0.005?
+for phi, t in zip(equivalence_ratios, ignitions):
+    
+    mol_O2 = 11.0 / phi
+    mol_N2 = 3.78 * mol_O2
+    X_string = "nc7h16:1.0,o2:" + str(round(mol_O2, 2)) + ",n2:" + str(round(mol_N2, 2))
+    gas.TPX = 500, 1e5, X_string
+
+    reactor = ct.IdealGasReactor(gas)
+    reactor_network = ct.ReactorNet([reactor])
+
+    start_time = t  #starting time
+    end_time = t+0.05 # seconds
+    n_steps = 251
+    times = np.linspace(start_time, end_time, n_steps)
+    concentrations = np.zeros((n_steps, gas.n_species))
+    mole_frac = np.zeros((n_steps, gas.n_species))
+    pressures = np.zeros(n_steps)
+    temperatures = np.zeros(n_steps)
+
+    reached_100ppm = False
+    ignited = False
+    reached_NO = False
+
+    for n, time in enumerate(times):
+        if time > 0:
+            reactor_network.advance(time)
+        temperatures[n] = reactor.T
+        pressures[n] = reactor.thermo.P
+        concentrations[n,:] = reactor.thermo.concentrations
+        mole_frac[n,:] = gas.X
+        if reactor.T > 1000 and not ignited: # Ignition time, estimate it to be when T is above 1000 K
+            ignited = True
+            print "At equivalence ratio {0}, fuel ignites at {1} seconds".format(str(phi), str(round(time,6)))
+        if 1e6*mole_frac[n, i_fuel] < 100.0 and not reached_100ppm: # Fuel is < 100 ppm
+            reached_100ppm = True
+            print "At equivalence ratio {0}, fuel reaches 100 ppm at {1} seconds".format(str(phi), str(round(time,6)))
+        if 1e6*mole_frac[n, i_no] >= 1000.0 and not reached_NO: # NO is >= 1000 ppm
+            reached_NO = True
+            print "At equivalence ratio {0}, reaction should be quenched at {1} seconds".format(str(phi), str(round(time,6)))
+            print "\n"
+    
+    plt_temps.plot(times-t, temperatures, label = "$\phi$=" + str(phi)) # Renormalized to just before ignition
+    
+    # Print other plots just for stoichiometric combustion
+    if phi == 1.0:
+        plt_input_spec.plot(times-t, 1E6*mole_frac[:, i_fuel], label = "C7H14, $\phi$ = 1.0")
+        plt_radicals.plot(times-t, 1E6*mole_frac[:,i_no], label = "NO")
+        plt_radicals.plot(times-t, 1E6*mole_frac[:,i_oh], label = "OH")
+        plt_radicals.plot(times-t, 1E6*mole_frac[:,i_o], label = "O")
+        plt_radicals.plot(times-t, 1E6*mole_frac[:,i_h], label = "H")
+plt_temps.set_xlabel("Time (s)")
+plt_temps.set_ylabel("Temperature (K)")
+plt_temps.legend(loc='best')
+plt_input_spec.set_xlabel("Time (s)")
+plt_input_spec.set_ylabel("Mole fraction (ppm)")
+plt_input_spec.legend(loc='best')
+plt_radicals.set_xlabel("Time (s)")
+plt_radicals.set_ylabel("Mole fraction (ppm)")
+plt_radicals.legend(loc='best')
+
 
 # Just want to check at least one rate to make sure it's reasonably close to the one in the book...These came from the gri mech.
 
