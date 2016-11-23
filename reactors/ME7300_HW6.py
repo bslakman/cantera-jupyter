@@ -8,7 +8,7 @@
 # #### Calculate:
 # 1. The adiabatic flame temperature if the fuel and air are preheated and introduced into the chamber at 500 K, for $\phi$ = 0.5, 0.8, 1.0, and 1.3. Plot the result ( $T_{flame}$ vs $\phi$ ) with Excel, or use Python if you are comfortable.
 # 2. The NO mole fraction at equlibrium for $\phi$ = 0.5, 0.8, 1.0, and 1.3. Plot the result ( $x_{NO}$ vs $\phi$ ) with Excel, or use Python if you are comfortable.
-# 3. The time at which the fuel ignites for $\phi$ = 0.5, 0.8, 1.0, and 1.3
+# 3. The time at which the fuel ignites for $\phi$ =  0.8, 1.0, and 1.3
 # 4. The time at which mole fraction of the fuel drops below 100 ppm for each $\phi$
 # 5. At what time should we quench the reaction (by rapid expansion) if we want to keep NO emissions below 1000 ppm, for each $\phi$? Is this before or after the time in part (4)?
 # 6. Also calculate 1-5 for the $\phi$ = 1.0 case by hand / using STANJAN.
@@ -22,7 +22,7 @@
 # 
 # ### Simply click inside the cells below to be able to type in and edit them, and press Shift+Enter to execute the code in a cell that is selected.
 
-# In[33]:
+# In[ ]:
 
 # Imports
 import cantera as ct
@@ -34,14 +34,14 @@ get_ipython().magic(u'matplotlib inline')
 
 # The n-heptane ($C_7H_{16}$) mechanism we will consider is from the Lawrence Livermore National Lab (LLNL), with the 3-reaction Zeldovich mechanism manually added to it. First we create a Solution object in Cantera for n-heptane gas that includes all of the thermodynamic and kinetic parameters needed to describe its combustion. (Don't worry about the warning)
 
-# In[2]:
+# In[ ]:
 
 gas = ct.Solution('heptanesymp159.cti')
 
 
 # We can print out some chemical species and reactions that are considered in the mechanism:
 
-# In[3]:
+# In[ ]:
 
 print "Some of the species in the mechanism:"
 print " ".join(gas.species_names[:20])
@@ -61,7 +61,7 @@ print "There are {0} total reactions in this mechanism!".format(len(gas.reaction
 
 # Let's look at the last few reactions in the mechanism, representing the Zeldovich mechanism.
 
-# In[20]:
+# In[ ]:
 
 zeldovich = gas.reactions()[-3:]
 for rxn in zeldovich:
@@ -71,80 +71,45 @@ for rxn in zeldovich:
 # #### 1. Calculate the adiabatic flame temperature if the fuel and air are preheated and introduced into the chamber at 500 K. 
 # First, we need to initialize the fuel at the correct temperature (K), pressure (Pa) and mole fractions (these can be molar ratios, Cantera will normalize them, like in STANJAN).
 # Replace the "xxxx" with the correct number of moles.
+# 
+# We'll find the equilibrium flame temperature by equilibrating keeping volume and internal energy
+# constant.
 
-# In[36]:
+# In[ ]:
 
 equivalence_ratios = np.array([0.5,0.8,1.0,1.3])
 T = np.zeros_like(equivalence_ratios)
 
 # phi=0.5
-gas.TPX = 500, 1e5, 'nc7h16:1.0,o2:22.0,n2:83.16'
+gas.TPX = 500, 1e5, 'nc7h16:1.0,o2:xxxx,n2:xxxx'
 gas.equilibrate('UV')
 T[0] = gas.T
 
 # phi=0.8
-gas.TPX = 500, 1e5, 'nc7h16:1.0,o2:13.75,n2:59.4'
+gas.TPX = 500, 1e5, 'nc7h16:1.0,o2:xxxx,n2:xxxx'
 gas.equilibrate('UV')
 T[1] = gas.T
 
 #phi=1.0
-gas.TPX = 500, 1e5, 'nc7h16:1.0,o2:11.0,n2:41.58'
+gas.TPX = 500, 1e5, 'nc7h16:1.0,o2:xxxx,n2:xxxx'
 gas.equilibrate('UV')
 T[2] = gas.T
 
 #phi=1.3
-gas.TPX = 500, 1e5, 'nc7h16:1.0,o2:8.46,n2:31.98'
+gas.TPX = 500, 1e5, 'nc7h16:1.0,o2:xxxx,n2:xxxx'
 gas.equilibrate('UV')
 T[3] = gas.T
             
 for phi, temp in zip(equivalence_ratios, T):
     print "For eq ratio {0}, adiabatic flame temperature is {1}".format(round(phi,1), int(round(temp,0)))
 
-#gas.TPX = 1000, 1e5, 'nc7h16:1.0,o2:xxxx,n2:xxxx'
 
-plt.plot(equivalence_ratios, T, linestyle='', marker='.')
-plt.xlim(0.4,1.4)
+# #### 2. Calculate the NO mole fraction at equlibrium for $\phi$ = 0.5, 0.8, 1.0, and 1.3
+# This time, we'll use a loop to go through equivalence ratios between 0.1 - 2.0 
 
+# In[ ]:
 
-# We'll find the equilibrium flame temperature by equilibrating keeping volume and internal energy
-# constant.
-
-# In[16]:
-
-gas.equilibrate('UV')
-print "The adiabatic flame temperature is {0} K".format(int(round(gas.T)))
-
-
-# #### 2. Calculate the NO concentration at equlibrium for $\phi$ = 0.7, 1.0, and 1.3
-# Change the numbers of moles for these equivalence ratios,below.
-
-# In[7]:
-
-x_NO_stoich = gas['no'].X[0]
-
-# For fuel lean case (0.7)
-gas.TPX = 500, 1e5, 'nc7h16:1.0,o2:15.71,n2:59.4'
-#gas.TPX = 1000, 1e5, 'nc7h16:1.0,o2:xxxx,n2:xxxx'
-gas.equilibrate('UV')
-x_NO_lean = gas['no'].X[0]
-
-# For fuel rich case (1.3)
-gas.TPX = 500, 1e5, 'nc7h16:1.0,o2:8.46,n2:31.98'
-#gas.TPX = 1000, 1e5, 'nc7h16:1.0,o2:xxxx,n2:xxxx'
-gas.equilibrate('UV')
-x_NO_rich = gas['no'].X[0]
-
-print "For fuel lean case, NO = {0} ppm".format(round(x_NO_lean*1e6, 1))
-print "For stoichiometric case, NO = {0} ppm".format(round(x_NO_stoich*1e6, 1))
-print "For fuel rich case, NO = {0} ppm".format(round(x_NO_rich*1e6, 1))
-
-
-# It may look like the NO is decreasing with equivalence ratio, but there is a maximum in the fuel lean region...
-
-# In[18]:
-
-get_ipython().magic(u'matplotlib inline')
-equivalence_ratios = np.linspace(0.1, 2, 50)
+equivalence_ratios = np.linspace(0.1, 2, 25)
 x_NO = np.zeros_like(equivalence_ratios)
 temperatures = np.zeros_like(equivalence_ratios)
 for i, phi in enumerate(equivalence_ratios):
@@ -155,28 +120,21 @@ for i, phi in enumerate(equivalence_ratios):
     gas.equilibrate('UV')
     temperatures[i] = gas.T
     x_NO[i] = gas['no'].X[0]
-plt1= plt.subplot(2,1,1)
-plt2= plt.subplot(2,1,2)
-plt1.plot(equivalence_ratios, x_NO*1E6)
-plt2.plot(equivalence_ratios, temperatures)
-plt.xlabel('$\phi$')
-plt.ylabel('NO (ppm)')
-print "The NO is maximum at equivalence ratio " + str(round(equivalence_ratios[np.argmax(x_NO)],3))
-
-# Print out the temperatures and have them plot with either matplotlib or Excel.
+    if round(phi,1) in [0.5, 0.8, 1.0, 1.3]:
+        print "For eq ratio {0}, NO = {1} ppm".format(round(phi,1), int(1E6*x_NO[i]))
 
 
-# #### 3. Calculate the time at which the fuel ignites for $\phi$ = 0.7, 1.0, and 1.3
+# #### 3. Calculate the time at which the fuel ignites for $\phi$ = 0.5, 0.8, 1.0, and 1.3
 # #### 4. Calculate the time at which mole fraction of the fuel drops below 100 ppm for each $\phi$
 # #### 5. At what time should we quench the reaction if we want to keep NO emissions below 1000 ppm? Is this before or after the time in part (4)?
 
 # For these three questions, we need to calculate kinetics.
 # The following code will utilize an ideal gas reactor (constant volume) in Cantera to model the reactor. We will print the answers to questions 3-5.
 
-# In[10]:
+# In[ ]:
 
-equivalence_ratios = np.array([0.7, 1.0, 1.3])
-ignitions = np.array([71.46, 69.45, 68.19])
+equivalence_ratios = np.array([0.8, 1.0, 1.3])
+ignitions = np.array([70.69, 69.45, 68.19])
 i_fuel = gas.species_names.index('nc7h16')
 i_no = gas.species_names.index('no')
 i_oh = gas.species_names.index('oh')
@@ -248,41 +206,4 @@ plt_input_spec.legend(loc='best')
 plt_radicals.set_xlabel("Time (s)")
 plt_radicals.set_ylabel("Mole fraction (ppm)")
 plt_radicals.legend(loc='best')
-
-
-# Just want to check at least one rate to make sure it's reasonably close to the one in the book...These came from the gri mech.
-
-# In[ ]:
-
-T = np.linspace(300,2500,100)
-
-
-# In[ ]:
-
-A = rxn.rate.pre_exponential_factor / 1000.0
-n = rxn.rate.temperature_exponent
-Ea = rxn.rate.activation_energy / 1000.0
-
-
-# In[ ]:
-
-rate_mech = A * T**n * np.exp(-Ea/8.314/T)
-rate_book = 7.1E7 * np.exp(-450.0/T)
-
-
-# In[ ]:
-
-import matplotlib.pyplot as plt
-get_ipython().magic(u'matplotlib inline')
-
-
-# In[ ]:
-
-plt.plot(1.0/T, np.log(rate_mech))
-plt.plot(1.0/T, np.log(rate_book))
-
-
-# In[ ]:
-
-
 
