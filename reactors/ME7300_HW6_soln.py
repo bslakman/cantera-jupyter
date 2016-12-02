@@ -8,10 +8,10 @@
 # #### Calculate:
 # 1. The adiabatic flame temperature if the fuel and air are preheated and introduced into the chamber at 750 K, for $\phi$ = 0.5, 0.8, 1.0, and 1.3. Plot the result ( $T_{flame}$ vs $\phi$ ) with Excel, or use Python if you are comfortable.
 # 2. The NO mole fraction at equlibrium for $\phi$ = 0.5, 0.8, 1.0, and 1.3. Plot the result ( $x_{NO}$ vs $\phi$ ) with Excel, or use Python if you are comfortable.
-# 3. The time at which the fuel ignites for $\phi$ =  0.8, 1.0, and 1.3
+# 3. The time at which the fuel ignites for $\phi$ =  0.8, 1.0, and 1.3 (don't do this one by hand)
 # 4. The time at which mole fraction of the fuel drops below 100 ppm for each $\phi$
 # 5. At what time should we quench the reaction (by rapid expansion) if we want to keep NO emissions below 1000 ppm, for each $\phi$? Is this before or after the time in part (4)?
-# 6. Also calculate 1-5 for the $\phi$ = 1.0 case by hand / using STANJAN.
+# 6. Also calculate questions 1,2,4,5 for the $\phi$ = 1.0 case by hand / using STANJAN.
 # 
 # In this homework we will use more detailed combustion chemistry then we previously considered in this class, along with the Zeldovich mechanism for thermal fixation of atmospheric N2, to model and predict NOx formation in heptane combustion.
 # We use an open source software tool called [Cantera](http://www.cantera.org/docs/sphinx/html/index.html) which helps us solve thermodynamics and kinetics problems.
